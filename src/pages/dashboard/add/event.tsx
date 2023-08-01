@@ -1,15 +1,18 @@
 import { Heading } from '@/components';
 import Button from '@/components/Buttons/Button';
 
+import 'react-toastify/dist/ReactToastify.css';
 import { Switch } from '@headlessui/react';
 import { Listbox, Transition } from '@headlessui/react';
 import { Fragment, useRef, useState } from 'react';
 import React from 'react';
+import { toast, ToastContainer } from 'react-toastify';
 
 interface TagType {
   id: number;
   name: string;
 }
+
 const Tags = [
   { id: 1, name: 'JavaScript' },
   { id: 2, name: 'TypeScript' },
@@ -17,7 +20,6 @@ const Tags = [
   { id: 4, name: 'NodeJs' },
   { id: 5, name: 'NextJs' },
 ];
-
 interface OnlineEventType {
   isOnline: boolean;
   location: string;
@@ -34,15 +36,15 @@ interface SpeakerType {
   socials: SocialType[];
 }
 
-interface SpeakerCount {
-  count: number;
-  speakers: SpeakerType[];
-}
+// interface SpeakerCount {
+//   count: number;
+//   speakers: SpeakerType[];
+// }
 
-interface SponsorsType {
-  count: number;
-  sponsors: string[];
-}
+// interface SponsorsType {
+//   count: number;
+//   sponsors: string[];
+// }
 
 function AddEvent() {
   const formRef = useRef(null);
@@ -51,110 +53,140 @@ function AddEvent() {
     isOnline: false,
     location: '',
   });
+  const [buttonLoading, setButtonLoading] = useState<boolean>(false);
   const [isTicketRequires, setIsTicketRequires] = useState<boolean>(false);
-  // const [sponsors, setSponsors] = useState<string[]>([])
-  const [speakerDetails, setSpeakerDetails] = useState<SpeakerCount>({
-    count: 0,
-    speakers: [
-      {
-        name: '',
-        profile: '',
-        designation: '',
-        socials: [{ name: '', link: '' }],
-      },
-    ],
-  });
-  const [sponsorsDetails, setSponsorsDetails] = useState<SponsorsType>({
-    count: 0,
-    sponsors: [],
-  });
+  // const [speakerDetails, setSpeakerDetails] = useState<SpeakerCount>({
+  //   count: 0,
+  //   speakers: [
+  //     {
+  //       name: '',
+  //       profile: '',
+  //       designation: '',
+  //       socials: [{ name: '', link: '' }],
+  //     },
+  //   ],
+  // });
+  const [speakerDetails, setSpeakerDetails] = useState<SpeakerType[]>([]);
+  //
+  // const [sponsorsDetails, setSponsorsDetails] = useState<SponsorsType>({
+  //   count: 0,
+  //   sponsors: [],
+  // });
+  const [sponsorsDetails, setSponsorsDetails] = useState<string[]>([]);
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
+    setButtonLoading(true);
     if (formRef.current) {
-      const formData = new FormData(formRef?.current);
+      const formData = new FormData(formRef.current);
       formData.append('address', JSON.stringify(isOnlineEvent));
       formData.append('tags', JSON.stringify(selectedTags));
-      // console.log(selectedTags)
-      formData.append('speakers', JSON.stringify(speakerDetails.speakers));
-      // console.log(sponsorsDetails.sponsors)
-      formData.append('sponsors', JSON.stringify(sponsorsDetails.sponsors));
-      // const object={}
-      //       formData.forEach(function(value: any,key:string){
-      //   object[key]=value;
-      // })
+      formData.append('speakers', JSON.stringify(speakerDetails));
+      formData.append('sponsors', JSON.stringify(sponsorsDetails));
+      formData.append('requiresTicket', JSON.stringify(isTicketRequires));
+      // if (formRef?.current?.date1 !== '') {
+      //   formData.append('date', formRef.current.date1.value.split('T')[0]);
+      //   formData.append('time', formRef.current.date1.value.split('T')[1]);
+      // }
 
-      // console.log("speakers: ",speakerDetails.speakers);
-      // console.log("sponsors: ",sponsorsDetails.sponsors);
-      // const res = await fetch('/api/event/addEvent', {
-      //   method: 'post',
-      //   headers: {
-      //     'Content-type': 'application/json',
-      //   },
-      //   body: JSON.stringify(object),
-      // }).then((r) => r.json());
-      // console.log(res);
-      //{ isOnline: Boolean, location: String }
-      //image:linkk
-      //date: date
-      //tags: string[]
+      const object: { [key: string]: any } = {};
+
+      formData.forEach(function (value: any, key: string) {
+        object[key] = value;
+      });
+
+      try {
+        const res = await fetch('/api/event/addEvent', {
+          method: 'post',
+          headers: {
+            'Content-type': 'application/json',
+          },
+          body: JSON.stringify(object),
+        }).then((r) => r.json());
+        if (res.success) {
+          setButtonLoading(false);
+          // router.push('/dashboard')
+        } else {
+          if (res.errors && res.errors.length > 0) {
+            const errorMessage = res.errors[0].msg;
+            toast.error(errorMessage, {
+              position: 'top-right',
+              autoClose: 5000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              progress: undefined,
+            });
+          }
+        }
+      } catch (errors) {
+        toast.error('Something went wrong. Try again', {
+          position: 'top-right',
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          progress: undefined,
+        });
+      }
     }
   };
 
-  const handleSponsorsCount = (e: any, type: string) => {
+  const handleSponsorsCount = (e: any, type: string, index = 0) => {
     e.preventDefault();
     if (type === 'add') {
-      setSponsorsDetails((prevSponsor) => ({
-        ...prevSponsor,
-        count: prevSponsor.count + 1,
-      }));
-      // setSponsorsCount(sponsorsCount + 1);
-      //
+      sponsorsDetails.push('');
+      // setSponsorsDetails((prevSponsor) => ({
+      //   ...prevSponsor,
+      //   count: prevSponsor.count + 1,
+      // }));
+      setSponsorsDetails([...sponsorsDetails]);
     }
     if (type === 'remove') {
-      // setSponsorsCount(sponsorsCount - 1);
+      const newSponsors = sponsorsDetails.filter(
+        (sp: string, currentIndex: number) => currentIndex !== index
+      );
+      return newSponsors;
+      //  setSponsorsDetails((prevSponsors)=>{
+      //   return prevSponsors.filter((sp:string,currentIndex:number)=>sponsorsDetails[index]!==sp)
+      // })
       // setSponsorsDetails((prevSponsors)=>{
-      //   return prevSponsors.filter((sponsorName: string,currentIndex:number)=>index!==currentIndex)
+      //   const newSponsors = prevSponsors.filter((_,currentIndex:number)=>index!==currentIndex)
+      // return {
+      //   ...prevSponsors,
+      //   count: prevSponsors.count-1,
+      //   sponsors: newSponsors,
+      // }
       // })
     }
   };
-  // const updatedSpeakers = [...speakerDetails.speakers];
-  //         updatedSpeakers[index].socials[socialIndex].name = e.target.value;
-  //         setSpeakerDetails((prevSpeakers) => ({
-  //           ...prevSpeakers,
-  //           speakers: updatedSpeakers,
-  //         }));
-  // const updatedSponsors = [...SponsorsDetails.sponsors];
-  // updatedSponsors[index]
-  const handleSponsorsAdd = (name: string) => {
-    setSponsorsDetails((prevSponsors) => {
-      const updatedSponsors = [...prevSponsors.sponsors, name];
-      return {
-        ...prevSponsors,
-        sponsors: updatedSponsors,
-      };
-    });
 
-    // setSponsorsDetails((prevSponsors)=>({
-    //   ...prevSponsors,
-    //  sponsors: [...prevSponsors.sponsors,name]
-    // }))
+  const handleSponsorsAdd = (name: string, index: number) => {
+    sponsorsDetails[index] = name;
+    setSponsorsDetails([...sponsorsDetails]);
   };
   const handleSpeakerCount = (e: any, type: string) => {
     e.preventDefault();
     if (type === 'add') {
-      setSpeakerDetails((prevSpeakers) => ({
-        ...prevSpeakers,
-        count: prevSpeakers.count + 1,
-      }));
-      // setSponsorsCount(sponsorsCount + 1);
-      //
+      speakerDetails.push({
+        name: '',
+        profile: '',
+        designation: '',
+        socials: [{ name: '', link: '' }],
+      });
+      setSpeakerDetails([...speakerDetails]);
     }
     if (type === 'remove') {
-      // setSponsorsDetails((prevSponsor)=>({
-      //   ...prevSponsor,
-      //   count: prevSponsor.count + 1,
-      // }))
+      // setSpeakerDetails((prevSpeakers)=>{
+      //   const newSpeakers = prevSpeakers.filter((_,currentIndex:number)=>index!==currentIndex)
+      //   return{
+      //      ...prevSpeakers,
+      //   count: prevSpeakers.count - 1,
+      //   speakers:newSpeakers
+      //   }
+      // })
       // setSponsorsCount(sponsorsCount + 1);
       //
     }
@@ -196,8 +228,8 @@ function AddEvent() {
     },
     {
       element: 'input',
-      label: 'date',
-      name: 'date',
+      label: 'date1',
+      name: 'date1',
       type: 'datetime-local',
       placeholder: 'Event Date',
     },
@@ -206,7 +238,7 @@ function AddEvent() {
       label: 'duration',
       name: 'duration',
       type: 'number',
-      placeholder: 'Event Date',
+      placeholder: 'Event Duration',
     },
     {
       element: 'input',
@@ -225,13 +257,6 @@ function AddEvent() {
     },
     {
       element: 'input',
-      label: 'linkedin',
-      name: 'linkedin',
-      type: 'url',
-      placeholder: 'Event Linkedin url',
-    },
-    {
-      element: 'input',
       label: 'twitter',
       name: 'twitter',
       type: 'url',
@@ -243,6 +268,13 @@ function AddEvent() {
       name: 'logo',
       type: 'url',
       placeholder: 'Event logo',
+    },
+    {
+      element: 'input',
+      label: 'image',
+      name: 'image',
+      type: 'url',
+      placeholder: 'Event Image',
     },
     {
       element: 'button',
@@ -372,7 +404,7 @@ function AddEvent() {
                       className={`${
                         isOnlineEvent.isOnline ? 'bg-teal-900' : 'bg-teal-700'
                       }
-          relative inline-flex h-[38px] w-[74px] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2  focus-visible:ring-white focus-visible:ring-opacity-75`}
+relative inline-flex h-[38px] w-[74px] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75`}
                     >
                       <span className="sr-only">Use setting</span>
                       <span
@@ -382,7 +414,7 @@ function AddEvent() {
                             ? 'translate-x-9'
                             : 'translate-x-0'
                         }
-            pointer-events-none inline-block h-[34px] w-[34px] transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out`}
+pointer-events-none inline-block h-[34px] w-[34px] transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out`}
                       />
                     </Switch>
                     {!isOnlineEvent.isOnline && (
@@ -412,7 +444,7 @@ function AddEvent() {
                     className={`${
                       isTicketRequires ? 'bg-teal-900' : 'bg-teal-700'
                     }
-          relative inline-flex h-[38px] w-[74px] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2  focus-visible:ring-white focus-visible:ring-opacity-75`}
+relative inline-flex h-[38px] w-[74px] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-opacity-75`}
                   >
                     <span className="sr-only">Use setting</span>
                     <span
@@ -420,7 +452,7 @@ function AddEvent() {
                       className={`${
                         isTicketRequires ? 'translate-x-9' : 'translate-x-0'
                       }
-            pointer-events-none inline-block h-[34px] w-[34px] transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out`}
+pointer-events-none inline-block h-[34px] w-[34px] transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out`}
                     />
                   </Switch>
                 )}
@@ -433,116 +465,95 @@ function AddEvent() {
                       >
                         Add Speakers
                       </Button>{' '}
-                      <Button
-                        className="mt-6"
-                        // onClick={() => setSpeakerCount(speakerCount - 1)}
-                      >
-                        Delete Speakers
-                      </Button>
                     </div>
+                    {speakerDetails.map((speaker, index: number) => (
+                      <div key={index}>
+                        <>Speaker {index + 1}</>
+                        <input
+                          type="text"
+                          id="speaker-name"
+                          name="speaker-name"
+                          className="mr-2 mx-auto h-10 w-full max-w-full rounded-lg pl-5 outline outline-2 outline-offset-1 outline-blue-400 placeholder:font-sans placeholder:text-base placeholder:text-gray-500 focus:outline-4"
+                          onBlur={(e) => {
+                            speakerDetails[index].name = e.target.value;
+                            setSpeakerDetails([...speakerDetails]);
+                          }}
+                          style={{ color: 'black' }}
+                          placeholder="Speaker-Name"
+                          aria-label="Speaker-Name"
+                          aria-describedby="Speaker-Name"
+                        />
 
-                    {Array.from({ length: speakerDetails.count as number }).map(
-                      (_, index: number) => (
-                        <div key={index}>
-                          <>Speaker {index + 1}</>
-                          <input
-                            type="text"
-                            id="speaker-name"
-                            name="speaker-name"
-                            className="mr-2 mx-auto h-10 w-full max-w-full rounded-lg pl-5 outline outline-2 outline-offset-1 outline-blue-400 placeholder:font-sans placeholder:text-base placeholder:text-gray-500 focus:outline-4"
-                            // onBlur={(e) =>
-                            // }
-                            placeholder="Speaker-Name"
-                            aria-label="Speaker-Name"
-                            aria-describedby="Speaker-Name"
-                          />
-
-                          <input
-                            type="text"
-                            id="speaker-profile"
-                            name="speaker-profile"
-                            className="mr-2 mx-auto h-10 w-full max-w-full rounded-lg pl-5 outline outline-2 outline-offset-1 outline-blue-400 placeholder:font-sans placeholder:text-base placeholder:text-gray-500 focus:outline-4"
-                            onBlur={(e) => {
-                              const updatedSpeakers = [
-                                ...speakerDetails.speakers,
-                              ];
-                              updatedSpeakers[index].profile = e.target.value;
-                              setSpeakerDetails((prevSpeakers) => ({
-                                ...prevSpeakers,
-                                speakers: updatedSpeakers,
-                              }));
-                            }}
-                            placeholder="Speaker-Profile"
-                            aria-label="Speaker-Profile"
-                            aria-describedby="Speaker-Profile"
-                          />
-                          <input
-                            type="text"
-                            id="speaker-designation"
-                            name="speaker-designation"
-                            className="mr-2 mx-auto h-10 w-full max-w-full rounded-lg pl-5 outline outline-2 outline-offset-1 outline-blue-400 placeholder:font-sans placeholder:text-base placeholder:text-gray-500 focus:outline-4"
-                            onBlur={(e) => {
-                              const updatedSpeakers = [
-                                ...speakerDetails.speakers,
-                              ];
-                              updatedSpeakers[index].designation =
-                                e.target.value;
-                              setSpeakerDetails((prevSpeakers) => ({
-                                ...prevSpeakers,
-                                speakers: updatedSpeakers,
-                              }));
-                            }}
-                            placeholder="Speaker Designation"
-                            aria-label="Speaker Designation"
-                            aria-describedby="Speaker Designation"
-                          />
-                          <input
-                            type="text"
-                            id="speaker-twitter"
-                            name="speaker-twitter"
-                            className="mr-2 mx-auto h-10 w-full max-w-full rounded-lg pl-5 outline outline-2 outline-offset-1 outline-blue-400 placeholder:font-sans placeholder:text-base placeholder:text-gray-500 focus:outline-4"
-                            onBlur={(e) => {
-                              const updatedSpeakers = [
-                                ...speakerDetails.speakers,
-                              ];
-                              updatedSpeakers[index].socials.push({
-                                name: 'twitter',
-                                link: e.target.value,
-                              });
-                              setSpeakerDetails((prevSpeakers) => ({
-                                ...prevSpeakers,
-                                speakers: updatedSpeakers,
-                              }));
-                            }}
-                            placeholder="Twitter"
-                            aria-label="Twitter"
-                            aria-describedby="Twitter"
-                          />
-                          <input
-                            type="text"
-                            id="speaker-linkedIn"
-                            name="speaker-linkedIn"
-                            className="mr-2 mx-auto h-10 w-full max-w-full rounded-lg pl-5 outline outline-2 outline-offset-1 outline-blue-400 placeholder:font-sans placeholder:text-base placeholder:text-gray-500 focus:outline-4"
-                            onBlur={(e) => {
-                              const updatedSpeakers = [
-                                ...speakerDetails.speakers,
-                              ];
-                              updatedSpeakers[index].socials.push({
-                                name: 'linkedIn',
-                                link: e.target.value,
-                              });
-                              setSpeakerDetails((prevSpeakers) => ({
-                                ...prevSpeakers,
-                                speakers: updatedSpeakers,
-                              }));
-                            }}
-                            placeholder="LinkedIn"
-                            aria-label="LinkedIn"
-                            aria-describedby="LinkedIn"
-                          />
-                        </div>
-                      )
-                    )}
+                        <input
+                          type="text"
+                          id="speaker-profile"
+                          name="speaker-profile"
+                          className="mr-2 mx-auto h-10 w-full max-w-full rounded-lg pl-5 outline outline-2 outline-offset-1 outline-blue-400 placeholder:font-sans placeholder:text-base placeholder:text-gray-500 focus:outline-4"
+                          onBlur={(e) => {
+                            speakerDetails[index].profile = e.target.value;
+                            setSpeakerDetails([...speakerDetails]);
+                          }}
+                          style={{ color: 'black' }}
+                          placeholder="Speaker-Profile"
+                          aria-label="Speaker-Profile"
+                          aria-describedby="Speaker-Profile"
+                        />
+                        <input
+                          type="text"
+                          id="speaker-designation"
+                          name="speaker-designation"
+                          className="mr-2 mx-auto h-10 w-full max-w-full rounded-lg pl-5 outline outline-2 outline-offset-1 outline-blue-400 placeholder:font-sans placeholder:text-base placeholder:text-gray-500 focus:outline-4"
+                          onBlur={(e) => {
+                            speakerDetails[index].designation = e.target.value;
+                            setSpeakerDetails([...speakerDetails]);
+                          }}
+                          style={{ color: 'black' }}
+                          placeholder="Speaker Designation"
+                          aria-label="Speaker Designation"
+                          aria-describedby="Speaker Designation"
+                        />
+                        <input
+                          type="text"
+                          id="speaker-twitter"
+                          name="speaker-twitter"
+                          className="mr-2 mx-auto h-10 w-full max-w-full rounded-lg pl-5 outline outline-2 outline-offset-1 outline-blue-400 placeholder:font-sans placeholder:text-base placeholder:text-gray-500 focus:outline-4"
+                          onBlur={(e) => {
+                            speakerDetails[index].socials.push({
+                              name: 'twitter',
+                              link: e.target.value,
+                            });
+                            setSpeakerDetails([...speakerDetails]);
+                          }}
+                          style={{ color: 'black' }}
+                          placeholder="Twitter"
+                          aria-label="Twitter"
+                          aria-describedby="Twitter"
+                        />
+                        <input
+                          type="text"
+                          id="speaker-linkedIn"
+                          name="speaker-linkedIn"
+                          className="mr-2 mx-auto h-10 w-full max-w-full rounded-lg pl-5 outline outline-2 outline-offset-1 outline-blue-400 placeholder:font-sans placeholder:text-base placeholder:text-gray-500 focus:outline-4"
+                          onBlur={(e) => {
+                            speakerDetails[index].socials.push({
+                              name: 'linkedIn',
+                              link: e.target.value,
+                            });
+                            setSpeakerDetails([...speakerDetails]);
+                          }}
+                          style={{ color: 'black' }}
+                          placeholder="LinkedIn"
+                          aria-label="LinkedIn"
+                          aria-describedby="LinkedIn"
+                        />
+                        <Button
+                          className="mt-6"
+                          // onClick={() => setSpeakerCount(speakerCount - 1)}
+                        >
+                          Delete Speakers
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 )}
                 {}
@@ -555,32 +566,34 @@ function AddEvent() {
                       >
                         Add Sponser
                       </Button>{' '}
-                      <Button
-                        className="mt-6"
-                        onClick={(e) => handleSponsorsCount(e, 'remove')}
-                      >
-                        Delete Sponser
-                      </Button>
                     </div>
 
-                    {Array.from({ length: sponsorsDetails.count }).map(
-                      (_, index: number) => (
-                        <div key={index}>
-                          {' '}
-                          <input
-                            type="text"
-                            id="sponsor-name"
-                            name="sponsor-name"
-                            className="mr-2 mx-auto h-10 w-full max-w-full rounded-lg pl-5 outline outline-2 outline-offset-1 outline-blue-400 placeholder:font-sans placeholder:text-base placeholder:text-gray-500 focus:outline-4"
-                            onBlur={(e) => handleSponsorsAdd(e.target.value)}
-                            style={{ color: 'black' }}
-                            placeholder="Sponsor Name"
-                            aria-label="Sponsor Name"
-                            aria-describedby="Sponsor Name"
-                          />
-                        </div>
-                      )
-                    )}
+                    {sponsorsDetails.map((_, index: number) => (
+                      <div key={index}>
+                        {' '}
+                        <input
+                          type="text"
+                          id="sponsor-name"
+                          name="sponsor-name"
+                          className="mr-2 mx-auto h-10 w-full max-w-full rounded-lg pl-5 outline outline-2 outline-offset-1 outline-blue-400 placeholder:font-sans placeholder:text-base placeholder:text-gray-500 focus:outline-4"
+                          onBlur={(e) =>
+                            handleSponsorsAdd(e.target.value, index)
+                          }
+                          style={{ color: 'black' }}
+                          placeholder="Sponsor Name"
+                          aria-label="Sponsor Name"
+                          aria-describedby="Sponsor Name"
+                        />
+                        <Button
+                          className="mt-6"
+                          onClick={(e) =>
+                            handleSponsorsCount(e, 'remove', index)
+                          }
+                        >
+                          Delete Sponser
+                        </Button>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -588,9 +601,21 @@ function AddEvent() {
           ))}
         </div>
         <Button type="submit" className="mt-6">
-          Add Event
+          {buttonLoading ? 'loading' : 'Add Event'}
         </Button>
       </form>
+      <ToastContainer
+        position="bottom-center"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </section>
   );
 }

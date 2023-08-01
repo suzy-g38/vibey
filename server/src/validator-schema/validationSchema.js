@@ -18,9 +18,9 @@ const createUserProviderSchema = {
         }
         return true;
       },
-    },
-    notEmpty: {
-      errorMessage: 'Email cannot be empty',
+      notEmpty: {
+        errorMessage: 'Email cannot be empty',
+      },
     },
   },
 
@@ -70,6 +70,7 @@ const createUserProviderSchema = {
     optional: true,
   },
 };
+
 const createUserSchema = {
   name: {
     in: ['body'],
@@ -81,7 +82,6 @@ const createUserSchema = {
       errorMessage: 'Name cannot be empty',
     },
   },
-
   email: {
     in: ['body'],
     custom: {
@@ -219,6 +219,12 @@ const slugSchema = {
   },
 };
 
+// body("age", "Invalid age")
+// .optional({ values: "falsy" })
+// .isISO8601()
+// .toDate(),
+// // …
+
 const createSchema = {
   name: {
     in: ['body'],
@@ -230,51 +236,44 @@ const createSchema = {
       errorMessage: 'Name cannot be empty',
     },
   },
-  slug: { in: ['body'], isString: true, notEmpty: true },
   organizer: { in: ['body'], isString: true, notEmpty: true },
   description: { in: ['body'], isString: true, notEmpty: true },
 
   address: {
     in: ['body'],
-    isObject: true,
-    notEmpty: {
-      errorMessage: 'address cannot be empty',
-    },
-  },
-  'address.isOnline': {
-    in: ['body'],
-    isBoolean: {
-      errorMessage: 'Invalid value for isOnline',
-    },
-    notEmpty: {
-      errorMessage: 'isOnline cannot be empty',
-    },
-  },
-  'address.location': {
-    in: ['body'],
-    isString: {
-      errorMessage: 'Invalid location value',
+    custom: {
+      options: (value) => {
+        if (
+          typeof JSON.parse(value) !== 'object' ||
+          Array.isArray(JSON.parse(value))
+        ) {
+          throw new Error('Address must be an object');
+        }
+        if (
+          JSON.parse(value).isOnline === false &&
+          JSON.parse(value).location.length === 0
+        ) {
+          throw new Error('If event is offline it should have a location');
+        }
+        return true;
+      },
     },
     notEmpty: {
-      errorMessage: 'location cannot be empty',
+      errorMessage: 'Address cannot be empty',
     },
   },
   image: {
     in: ['body'],
+    isString: true,
     // custom: {
     //   options: (value) => {
     //     if (!/\.(png|jpg|jpeg)$/.test(value)) {
-    //       throw new Error('Image must have a valid extension png, jpg, jpeg');
+    //       throw new Error('Image must have a valid extension png, jpg, jpeg'),
     //     }
-    //     return true;
+    //     return true,
     //   },
     // },
-    isURL: {
-      errorMessage: 'Invalid URL',
-    },
-    notEmpty: {
-      errorMessage: 'image cannot be empty',
-    },
+    optional: true,
   },
   date: {
     in: ['body'],
@@ -285,10 +284,42 @@ const createSchema = {
       errorMessage: 'date cannot be empty',
     },
   },
+  // time: {
+  //   in: ['body'],
+  //   notEmpty: {
+  //     errorMessage: 'Time cannot be empty',
+  //   },
+  // },
+  time: {
+    in: ['body'],
+    custom: {
+      options: (value) => {
+        if (!/^\d{2}:\d{2}$/.test(value)) {
+          throw new Error('Invalid time value');
+        }
+        const [hours, minutes] = value.split(':').map(Number);
+        if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+          throw new Error('Invalid time value');
+        }
+        return true;
+      },
+    },
+    notEmpty: {
+      errorMessage: 'Time cannot be empty',
+    },
+  },
   duration: {
     in: ['body'],
-    isNumeric: {
-      errorMessage: 'Invalid duration value',
+    custom: {
+      options: (value) => {
+        if (!/^\d+$/.test(value)) {
+          throw new Error('Invalid duration value');
+        }
+        if (Number(value) < 1) {
+          throw new Error('Duration must be greater than 0');
+        }
+        return true;
+      },
     },
     notEmpty: {
       errorMessage: 'duration cannot be empty',
@@ -296,12 +327,67 @@ const createSchema = {
   },
   tags: {
     in: ['body'],
-    isArray: {
-      errorMessage: 'Tags must be an array',
-      options: { min: 1 },
+    custom: {
+      options: (value) => {
+        if (!Array.isArray(JSON.parse(value))) {
+          throw new Error('Tags must be an array');
+        }
+        if (JSON.parse(value).length < 1) {
+          throw new Error('Tags array must contain at least one item');
+        }
+        return true;
+      },
+      notEmpty: {
+        errorMessage: 'Tags array must not be empty',
+      },
+    },
+  },
+  speakers: {
+    in: ['body'],
+    custom: {
+      options: (value) => {
+        if (!Array.isArray(JSON.parse(value))) {
+          throw new Error('Speakers must be an array');
+        }
+        if (JSON.parse(value).length < 1) {
+          throw new Error('Speakers array must contain at least one item');
+        }
+        JSON.parse(value).forEach((speaker) => {
+          if (!speaker.name || !speaker.profile || !speaker.designation) {
+            throw new Error(
+              'Each speaker must have a name, profile, and designation'
+            );
+          }
+          if (speaker.socials && !Array.isArray(speaker.socials)) {
+            throw new Error('Socials must be an array');
+          }
+        });
+        return true;
+      },
     },
     notEmpty: {
-      errorMessage: 'Tags array must not be empty',
+      errorMessage: 'Speakers cannot be empty',
+    },
+  },
+  requiresTicket: {
+    in: ['body'],
+    isBoolean: {
+      errorMessage: 'Invalid value for requiresTicket',
+    },
+    notEmpty: {
+      errorMessage: 'requiresTicket cannot be empty',
+    },
+  },
+  sponsors: {
+    in: ['body'],
+    custom: {
+      options: (value) => {
+        if (!Array.isArray(JSON.parse(value))) {
+          throw new Error('Sponsors must be an array');
+        }
+        return true;
+      },
+      optional: true,
     },
   },
 };
